@@ -1,0 +1,3 @@
+<launch>
+    <node pkg="d3_gamepad" type="xbox_gamepad.py" name="d3_gamepad" ns="gamepad" output="screen"/>
+</launch>
