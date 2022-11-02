@@ -164,7 +164,7 @@ include_directories(
 # )
 
 catkin_install_python(PROGRAMS
-	scripts/publisher.py
+	scripts/xbox_gamepad.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
