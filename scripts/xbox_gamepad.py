@@ -146,7 +146,7 @@ class Gamepad:
     def getDataAssoc(self):
         data_assoc = dict()
         data_assoc['axes'] = dict()
-        data_assoc['axes']['LEFT_X'] = -round(((-2/255)*self.axes['LEFT_X'])+1, 2)	        
+        data_assoc['axes']['LEFT_X'] = -round(((-2/255)*self.axes['LEFT_X'])+1, 2)
         data_assoc['axes']['LEFT_Y'] = round(((-2/255)*self.axes['LEFT_Y'])+1, 2)
         data_assoc['axes']['RIGHT_X'] = -round(((-2/255)*self.axes['RIGHT_X'])+1, 2)
         data_assoc['axes']['RIGHT_Y'] = round(((-2/255)*self.axes['RIGHT_Y'])+1, 2)
@@ -182,11 +182,17 @@ class Gamepad:
 
         return(gp_data)
 
-def publisher():
-    pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10) # Publish a Twist to the cmd_vel topic, only queue 10 messages if our Subscribers are not receiving them fast enough
+def gamepad_run():
     rospy.init_node('d3_gamepad', anonymous=True) # ROS node name will start with 'd3_gamepad' and be suffixed with some random numbers 
     rospy.loginfo(sys.path)
     rate = rospy.Rate(10) # 10 Hz refresh from input
+
+    max_lin_vel = rospy.get_param("~max_linear_velocity", 1.0)
+    rospy.loginfo("max_linear_velocity: %f", max_lin_vel)
+    max_ang_vel = rospy.get_param("~max_angular_velocity", 1.0)
+    rospy.loginfo("max_angular_velocity: %f", max_ang_vel)
+
+    pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10) # Publish a Twist to the cmd_vel topic, only queue 10 messages if our Subscribers are not receiving them fast enough
 
     gp = Gamepad()
 
@@ -194,16 +200,18 @@ def publisher():
         gp_data = gp.getDataAssoc()
         rospy.loginfo(gp_data)
         vel_msg = Twist()
-        vel_msg.linear.x = gp_data['axes']['LEFT_Y'] #Only linear component used
+        # Data comes normalized -1,1. Convert to range specified by max_*_vel parameters.
+        vel_msg.linear.x = gp_data['axes']['LEFT_Y'] * max_lin_vel
+        # Invert angular for controller input to match robots coordinate system
+        vel_msg.angular.z = gp_data['axes']['LEFT_X'] * max_ang_vel * -1.0
         vel_msg.linear.y = gp_data['buttons']['BACK'] #EStop Stop
         vel_msg.linear.z = gp_data['buttons']['START'] #EStop Resume
-        vel_msg.angular.z = gp_data['axes']['LEFT_X'] #Only angular component used
 
         pub.publish(vel_msg)
         rate.sleep()
 
 if __name__ == '__main__':
     try:
-        publisher()
+        gamepad_run()
     except rospy.ROSInterruptException:
         pass
